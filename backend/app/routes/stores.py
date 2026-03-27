@@ -66,7 +66,7 @@ def get_stores():
 @stores_bp.route('/<int:store_id>', methods=['GET'])
 @jwt_required()
 def get_store(store_id):
-    store = Store.query.get(store_id)
+    store = db.session.get(Store, store_id)
 
     if not store:
         return jsonify({'error': 'Store not found'}), 404
@@ -111,7 +111,7 @@ def delete_store(store_id):
     if claims.get('role') != 'merchant':
         return jsonify({'error': 'Only merchants can delete stores'}), 403
 
-    store = Store.query.get(store_id)
+    store = db.session.get(Store, store_id)
     if not store:
         return jsonify({'error': 'Store not found'}), 404
 

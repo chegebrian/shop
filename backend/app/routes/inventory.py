@@ -29,7 +29,7 @@ def create_entry():
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
 
     # Check product exists
-    product = Product.query.get(data['product_id'])
+    product = product = db.session.get(Product, data['product_id'])
     if not product:
         return jsonify({'error': 'Product not found'}), 404
 
@@ -67,7 +67,7 @@ def create_entry():
 @jwt_required()
 def get_entries():
     current_user_id = get_jwt_identity()
-    current_user = User.query.get(current_user_id)
+    current_user = db.session.get(User, current_user_id)
     claims = get_jwt()
     role = claims.get('role')
 
@@ -155,7 +155,7 @@ def update_payment_status(entry_id):
 @jwt_required()
 def get_summary():
     current_user_id = get_jwt_identity()
-    current_user = User.query.get(current_user_id)
+    current_user = db.session.get(User, current_user_id)
     claims = get_jwt()
     role = claims.get('role')
 
