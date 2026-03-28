@@ -9,11 +9,11 @@ const Sidebar = () => {
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
 
-  const handleLogout = () => {
-    dispatch(logout());
-    toast.success('Logged out successfully');
-    navigate('/login');
-  };
+ const handleLogout = () => {
+  dispatch(logout());
+  toast.success('Logged out successfully');
+  window.location.href = '/';
+};
 
   // Different menu items per role
   const merchantLinks = [

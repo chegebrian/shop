@@ -29,6 +29,10 @@ const LandingPage = () => {
           <span style={{ color: '#fff', fontWeight: '700', fontSize: '18px', letterSpacing: '0.5px' }}>StockManager Pro</span>
         </div>
         <div style={{ display: 'flex', gap: '12px' }}>
+         <button onClick={() => navigate('/')} style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
+           <span style={{ fontSize: '22px' }}>📦</span>
+           <span style={{ color: '#fff', fontWeight: '700', fontSize: '18px' }}>StockManager Pro</span>
+        </button>
           <button onClick={() => navigate('/login')}
             style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.3)', color: '#fff', padding: '8px 20px', borderRadius: '6px', cursor: 'pointer', fontSize: '14px' }}>
             Sign In

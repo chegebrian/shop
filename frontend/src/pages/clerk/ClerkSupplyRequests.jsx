@@ -116,22 +116,46 @@ const ClerkSupplyRequests = () => {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
             <thead>
               <tr style={{ background: '#f8fafc' }}>
-                {['Product', 'Qty Requested', 'Note', 'Status', 'Date'].map(h => (
+                {['Product', 'Qty Requested', 'Note', 'Status', 'Date', 'Actions'].map(h => (
                   <th key={h} style={{ padding: '10px 16px', textAlign: 'left', color: '#64748b', fontWeight: '600', fontSize: '12px' }}>{h}</th>
                 ))}
               </tr>
             </thead>
-            <tbody>
-              {requests.map(r => (
-                <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '10px 16px', fontWeight: '500' }}>{r.product_name}</td>
-                  <td style={{ padding: '10px 16px' }}>{r.quantity_requested}</td>
-                  <td style={{ padding: '10px 16px', color: '#6b7280' }}>{r.note || '—'}</td>
-                  <td style={{ padding: '10px 16px' }}><span style={statusStyle(r.status)}>{r.status}</span></td>
-                  <td style={{ padding: '10px 16px', color: '#9ca3af', fontSize: '12px' }}>{r.created_at}</td>
-                </tr>
-              ))}
-            </tbody>
+           <tbody>
+  {requests.map(r => (
+    <tr key={r.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+      <td style={{ padding: '10px 16px', fontWeight: '500' }}>{r.product_name}</td>
+      <td style={{ padding: '10px 16px' }}>{r.quantity_requested}</td>
+      <td style={{ padding: '10px 16px', color: '#6b7280' }}>{r.note || '—'}</td>
+      <td style={{ padding: '10px 16px' }}>
+        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '12px', fontWeight: '600',
+          background: r.status === 'approved' ? '#d1fae5' : r.status === 'declined' ? '#fee2e2' : '#fef9c3',
+          color: r.status === 'approved' ? '#065f46' : r.status === 'declined' ? '#991b1b' : '#713f12' }}>
+          {r.status}
+        </span>
+      </td>
+      <td style={{ padding: '10px 16px', color: '#9ca3af', fontSize: '12px' }}>{r.created_at}</td>
+      <td style={{ padding: '10px 16px' }}>
+        {r.status === 'pending' && (
+          <button
+            onClick={async () => {
+              if (!window.confirm('Delete this request?')) return;
+              try {
+                await api.delete(`/supply-requests/${r.id}`);
+                toast.success('Request deleted');
+                fetchRequests();
+              } catch (e) {
+                toast.error(e.response?.data?.error || 'Delete failed');
+              }
+            }}
+            style={{ padding: '4px 12px', fontSize: '12px', background: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '6px', cursor: 'pointer', color: '#991b1b', fontWeight: '600' }}>
+            Delete
+          </button>
+        )}
+      </td>
+    </tr>
+  ))}
+</tbody>
           </table>
         )}
       </div>

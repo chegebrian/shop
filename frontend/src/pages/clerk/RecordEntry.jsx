@@ -14,17 +14,21 @@ const RecordEntry = () => {
   const [loading, setLoading] = useState(false);
   const { register, handleSubmit, formState: { errors } } = useForm();
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const res = await api.get('/products/');
-        setProducts(res.data.products);
-      } catch {
-        toast.error('Failed to load products');
+useEffect(() => {
+  const fetchProducts = async () => {
+    try {
+      const res = await api.get('/products/');
+      const list = res.data.products || [];
+      setProducts(list);
+      if (list.length === 0) {
+        toast.warning('No products found. Ask your admin to add products to your store.');
       }
-    };
-    fetchProducts();
-  }, []);
+    } catch (e) {
+      toast.error('Failed to load products: ' + (e.response?.data?.error || e.message));
+    }
+  };
+  fetchProducts();
+}, []);
 
   const onSubmit = async (data) => {
     setLoading(true);

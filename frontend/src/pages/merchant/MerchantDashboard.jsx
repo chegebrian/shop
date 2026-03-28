@@ -15,6 +15,8 @@ const MerchantDashboard = () => {
   const { summary } = useSelector(s => s.inventory);
   const { user } = useSelector(s => s.auth);
 
+  const storeNameRef = React.useRef('');
+  const storeLocationRef = React.useRef('');
   const [stores, setStores] = useState([]);
   const [storeReports, setStoreReports] = useState([]);
   const [admins, setAdmins] = useState([]);
@@ -67,22 +69,24 @@ const MerchantDashboard = () => {
     }
   };
 
-  const handleAddStore = async (e) => {
-    e.preventDefault();
-    if (!newStore.name) { toast.error('Store name is required'); return; }
-    setAddingStore(true);
-    try {
-      await api.post('/stores/', newStore);
-      toast.success('Store created ✅');
-      setNewStore({ name: '', location: '' });
-      loadStores();
-    } catch (e) {
-      toast.error(e.response?.data?.error || 'Failed to create store');
-    } finally {
-      setAddingStore(false);
-    }
-  };
-
+ const handleAddStore = async (e) => {
+  e.preventDefault();
+  const name = storeNameRef.current;
+  const location = storeLocationRef.current;
+  if (!name) { toast.error('Store name is required'); return; }
+  setAddingStore(true);
+  try {
+    await api.post('/stores/', { name, location });
+    toast.success('Store created ✅');
+    storeNameRef.current = '';
+    storeLocationRef.current = '';
+    loadStores();
+  } catch (e) {
+    toast.error(e.response?.data?.error || 'Failed to create store');
+  } finally {
+    setAddingStore(false);
+  }
+};
   const handleDeleteStore = async (storeId, name) => {
     if (!window.confirm(`Delete store "${name}"?`)) return;
     try {
@@ -149,13 +153,11 @@ const MerchantDashboard = () => {
         <form onSubmit={handleAddStore} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
           <div style={{ flex: 1, minWidth: '180px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Store Name *</label>
-            <input value={newStore.name} onChange={e => setNewStore({ ...newStore, name: e.target.value })} placeholder="e.g. Main Branch"
-              style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+            <input defaultValue=""onChange={e => { storeNameRef.current = e.target.value; }} placeholder="e.g. Main Branch" style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}/>
           </div>
           <div style={{ flex: 1, minWidth: '180px' }}>
             <label style={{ display: 'block', fontSize: '13px', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Location</label>
-            <input value={newStore.location} onChange={e => setNewStore({ ...newStore, location: e.target.value })} placeholder="e.g. Nairobi CBD"
-              style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }} />
+            <input defaultValue=""onChange={e => { storeLocationRef.current = e.target.value; }} placeholder="e.g. Nairobi CBD"style={{ width: '100%', padding: '9px 12px', border: '1px solid #d1d5db', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' }}/>
           </div>
           <div style={{ display: 'flex', alignItems: 'flex-end' }}>
             <button type="submit" disabled={addingStore}
