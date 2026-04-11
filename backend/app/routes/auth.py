@@ -4,7 +4,7 @@ from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identi
 from app import db
 from app.models.user import User
 from app.utils.validators import validate_email, validate_password, validate_required_fields
-from app.utils.email import send_invite_email
+from app.utils.email import (send_welcome_email, send_invite_email, send_login_notification)
 import bcrypt
 import secrets
 from datetime import datetime, timedelta
@@ -23,31 +23,26 @@ def health():
 # -----------------------------------------------
 # REGISTER FIRST MERCHANT (only once, on setup)
 # -----------------------------------------------
-@auth_bp.route('/setup', methods=['POST'])
-def setup_merchant():
-    """Create the very first merchant account"""
-
-    # Check if a merchant already exists
-    existing = User.query.filter_by(role='merchant').first()
-    if existing:
-        return jsonify({'error': 'Merchant already exists'}), 400
-
+@auth_bp.route('/register-merchant', methods=['POST'])
+def register_merchant():
+    """Any new merchant can register — no limit"""
     data = request.get_json()
 
-    # Validate required fields
     missing = validate_required_fields(data, ['full_name', 'email', 'password'])
     if missing:
         return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
 
-    # Validate email
     if not validate_email(data['email']):
-        return jsonify({'error': 'Invalid email address'}), 400
+        return jsonify({'error': 'Please enter a valid email address'}), 400
 
-    # Validate password
     if not validate_password(data['password']):
         return jsonify({'error': 'Password must be at least 6 characters'}), 400
 
-    # Hash the password (never store plain passwords!)
+    # Check if email already exists
+    existing = User.query.filter_by(email=data['email']).first()
+    if existing:
+        return jsonify({'error': 'An account with this email already exists. Please login instead.'}), 400
+
     hashed = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
 
     merchant = User(
@@ -62,8 +57,14 @@ def setup_merchant():
     db.session.add(merchant)
     db.session.commit()
 
+    # Send welcome email (won't fail if email not configured)
+    try:
+        send_welcome_email(merchant.email, merchant.full_name, 'merchant')
+    except Exception as e:
+        print(f"Welcome email not sent: {e}")
+
     return jsonify({
-        'message': 'Merchant account created successfully! ✅',
+        'message': f'Welcome to StockManager Pro, {merchant.full_name}! 🎉',
         'user': merchant.to_dict()
     }), 201
 
@@ -110,6 +111,12 @@ def login():
         identity=str(user.id),
         additional_claims={'role': user.role}
     )
+
+    # Send login notification email
+    try:
+        send_login_notification(user.email, user.full_name, user.role)
+    except Exception as e:
+        print(f"Login email not sent: {e}")
 
     return jsonify({
         'message': f'Welcome back, {user.full_name}! 👋',
@@ -221,6 +228,12 @@ def register():
 
     db.session.commit()
 
+    # Send welcome email after completing registration
+    try:
+        send_welcome_email(user.email, user.full_name, user.role)
+    except Exception as e:
+        print(f"Welcome email not sent: {e}")
+
     return jsonify({
         'message': f'Welcome, {user.full_name}! Registration complete 🎉',
         'user': user.to_dict()
@@ -325,3 +338,49 @@ def toggle_user(user_id):
     db.session.commit()
     return jsonify({'message': 'User updated', 'user': user.to_dict()}), 200
 
+@auth_bp.route('/register-free', methods=['POST'])
+def register_free():
+    """Self registration for admin or clerk without invite"""
+    data = request.get_json()
+
+    missing = validate_required_fields(data, ['full_name', 'email', 'password', 'role'])
+    if missing:
+        return jsonify({'error': f'Missing fields: {", ".join(missing)}'}), 400
+
+    if not validate_email(data['email']):
+        return jsonify({'error': 'Please enter a valid email address'}), 400
+
+    if not validate_password(data['password']):
+        return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
+    if data['role'] not in ['admin', 'clerk', 'merchant']:
+        return jsonify({'error': 'Role must be merchant, admin or clerk'}), 400
+
+    existing = User.query.filter_by(email=data['email']).first()
+    if existing:
+        return jsonify({'error': 'An account with this email already exists'}), 400
+
+    hashed = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
+
+    user = User(
+        full_name=data['full_name'],
+        email=data['email'],
+        password_hash=hashed.decode('utf-8'),
+        role=data['role'],
+        is_active=True,
+        is_verified=True,
+        store_id=data.get('store_id')
+    )
+
+    db.session.add(user)
+    db.session.commit()
+
+    try:
+        send_welcome_email(user.email, user.full_name, user.role)
+    except Exception as e:
+        print(f"Welcome email not sent: {e}")
+
+    return jsonify({
+        'message': f'Account created successfully! Welcome, {user.full_name} 🎉',
+        'user': user.to_dict()
+    }), 201
