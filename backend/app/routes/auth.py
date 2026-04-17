@@ -10,6 +10,8 @@ import os
 import secrets
 from datetime import datetime, timedelta
 
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")
+
 auth_bp = Blueprint('auth', __name__)
 
 
@@ -27,7 +29,9 @@ def health():
 @auth_bp.route('/register-merchant', methods=['POST'])
 def register_merchant():
     """Any new merchant can register — no limit"""
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
     missing = validate_required_fields(data, ['full_name', 'email', 'password'])
     if missing:
@@ -75,7 +79,9 @@ def register_merchant():
 # -----------------------------------------------
 @auth_bp.route('/login', methods=['POST'])
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
     # Validate required fields
     missing = validate_required_fields(data, ['email', 'password'])
@@ -139,7 +145,9 @@ def invite_user():
     if not current_user:
         return jsonify({'error': 'User not found'}), 404
 
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
     missing = validate_required_fields(data, ['email', 'role'])
     if missing:
@@ -179,15 +187,15 @@ def invite_user():
 
     # Try to send email but don't fail if email isn't configured
     try:
-        invite_link = f"http://localhost:3000/register?token={invite_token}"
+        invite_link = f"{FRONTEND_URL}/register?token={invite_token}"
         send_invite_email(data['email'], invite_link, data['role'])
     except Exception as e:
         print(f"Email not sent (not configured): {e}")
 
     return jsonify({
-        'message': f'User invited successfully ✅',
+        'message': 'User invited successfully ✅',
         'invite_token': invite_token,
-        'invite_link': f'http://localhost:3000/register?token={invite_token}',
+        'invite_link': invite_link,
         'note': 'Share this link with the user to complete registration'
     }), 200
 
@@ -196,7 +204,9 @@ def invite_user():
 # -----------------------------------------------
 @auth_bp.route('/register', methods=['POST'])
 def register():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
     missing = validate_required_fields(data, ['token', 'full_name', 'password'])
     if missing:
@@ -249,10 +259,13 @@ def register():
 def get_current_user():
     current_user_id = get_jwt_identity()
     user = db.session.get(User, current_user_id)
+    return jsonify({'user': user.to_dict()}), 200
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     email = data.get('email')
 
     if not email:
@@ -267,15 +280,10 @@ def forgot_password():
         user.invite_token_expiry = datetime.utcnow() + timedelta(hours=1)
         db.session.commit()
 
-        reset_link = f"http://localhost:3000/reset-password?token={token}"
+        reset_link = f"{FRONTEND_URL}/reset-password?token={token}"
         send_invite_email(user.email, reset_link, 'password reset')
 
     return jsonify({'message': 'If that email exists, a reset link has been sent'}), 200
-
-    if not user:
-        return jsonify({'error': 'User not found'}), 404
-
-    return jsonify({'user': user.to_dict()}), 200
 
 # GET ALL USERS (merchant only)
 @auth_bp.route('/users', methods=['GET'])
@@ -334,7 +342,9 @@ def toggle_user(user_id):
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     user.is_active = data.get('is_active', user.is_active)
     db.session.commit()
     return jsonify({'message': 'User updated', 'user': user.to_dict()}), 200
@@ -342,7 +352,9 @@ def toggle_user(user_id):
 @auth_bp.route('/register-free', methods=['POST'])
 def register_free():
     """Self registration for admin or clerk without invite"""
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
 
     missing = validate_required_fields(data, ['full_name', 'email', 'password', 'role'])
     if missing:
@@ -391,7 +403,9 @@ import jwt as pyjwt
 @auth_bp.route('/google', methods=['POST'])
 def google_login():
     """Handle Google OAuth login — creates account if first time"""
-    data = request.get_json()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({'error': 'Invalid or missing JSON body'}), 400
     google_token = data.get('token')
 
     if not google_token:
